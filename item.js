@@ -5,4 +5,8 @@ class Item {
         this.description = description;
         this.synonyms = synonyms.map(syn => new Synonym(syn.name, syn.softwares, syn.args));
     }
+
+    
 }
+
+export default Item;

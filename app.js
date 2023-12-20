@@ -1,10 +1,24 @@
 require("dotenv").config();
 const express = require("express");
+const bodyParser = require("body-parser");
 const { Sequelize, DataTypes } = require("sequelize");
 
 const app = express();
 const port = process.env.PORT || 3000;
-app.use(express.json());
+app.use(bodyParser.json());
+
+
+/*
+class Item {
+  constructor(id, name, description, synonyms) {
+      this.id = id;
+      this.name = name;
+      this.description = description;
+      this.synonyms = synonyms.map(syn => new Synonym(syn.name, syn.softwares, syn.args));
+  }
+}
+*/
+
 
 const sequelize = new Sequelize(process.env.DB_URL, {
   dialect: "postgres",
@@ -17,6 +31,7 @@ const sequelize = new Sequelize(process.env.DB_URL, {
   },
 });
 
+
 sequelize
   .sync()
   .then(() => {
@@ -26,96 +41,76 @@ sequelize
     console.log(err);
   });
 
+//-------------------------------------------------------------------------------------
+
 //   model schema
-const post = sequelize.define("post", {
-  title: {
+const item = sequelize.define("item", {
+  id: {
+    primaryKey: true,
     type: DataTypes.STRING,
     allowNull: false,
   },
-  content: {
+  name: {
     type: DataTypes.STRING,
     allowNull: false,
   },
+  description: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
+  synonyms: {
+    type: DataTypes.ARRAY(DataTypes.JSON)
+  }
 });
 
-app.get("/", (req, res) => {
-  res.send("Hello World!");
+
+
+/*app.post("/Item/create", async (req, res) => {
+  const itemData = req.body;
+  const item = new Item(itemData.id, itemData.name, itemData.description, itemData.synonyms);
+  res.status(201).send(itemData.name);
 });
+*/
+/*
+app.get("/Item/getAll", async (req, res) => {
+  try {
+    const allItems = await Item.findAll();
+    res.json(allItems);
+  } catch (err) {
+    console.log(err);
+  }
+});
+*/
+
+app.post("/Item/create", async (req, res) => {
+  const { id, name, description, synonyms } = req.body;
+  try {
+    const newItem = await item.create({ id, name, description, synonyms });
+    res.json(newItem);
+  } catch (err) {
+    console.log(err);
+  }
+});
+
+
+app.get("/Item/getAll", async (req, res) => {
+  try {
+    const allItems = await item.findAll();
+    res.json(allItems);
+  } catch (err) {
+    console.log(err);
+  }
+});
+
 
 app.get("/get-posts", async (req, res) => {
   try {
     const allPosts = await post.findAll();
     res.json(allPosts);
-  } catch (err) { 
-    console.log(err);
-  }
-});
-
-app.get("/User/getUser", (req, res) => {
-  res.send("Hello World!");
-});
-
-app.get("/Items/getItems", (req, res) => {
-  res.send("Hello World!");
-});
-
-app.get("/User/checkLogin", (req, res) => {
-  res.send("Hello World!");
-});
-
-
-app.post("/create-post", async (req, res) => {
-  const { title, content } = req.body;
-  try {
-    const newPost = await post.create({ title, content });
-    res.json(newPost);
   } catch (err) {
     console.log(err);
   }
 });
-
-app.post("/User/createUser", async (req, res) => {
-  const { title, content } = req.body;
-  try {
-    const newPost = await post.create({ title, content });
-    res.json(newPost);
-  } catch (err) {
-    console.log(err);
-  }
-});
-
-app.post("/Item/createItem", async (req, res) => {
-  const { title, content } = req.body;
-  try {
-    const newPost = await post.create({ title, content });
-    res.json(newPost);
-  } catch (err) {
-    console.log(err);
-  }
-});
-
-
-
-app.patch('/Item/editItem/:id', (req, res) => {
-});
-
-app.put('/Item/editItem/:id', (req, res) => {
-});
-
-app.patch('/User/editUser/:id', (req, res) => {
-});
-
-app.put('/User/editUser/:id', (req, res) => {
-});
-
-app.delete("/User/deleteUser/:id", (req, res) => {
-});
-
-app.delete("/Item/deleteItem/:id", (req, res) => {
-});
-
-
-
 
 app.listen(port, () => {
   console.log(`Example app listening at http://localhost:${port}`);
