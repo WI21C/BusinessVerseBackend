@@ -1,7 +1,8 @@
 require("dotenv").config();
 const express = require("express");
 const bodyParser = require("body-parser");
-const { Sequelize, DataTypes } = require("sequelize");
+const { Sequelize } = require("sequelize");
+const Item = require("./item");
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -31,6 +32,9 @@ const sequelize = new Sequelize(process.env.DB_URL, {
   },
 });
 
+//Definieren des Item-Modells
+const itemModel = Item.defineModel(sequelize);
+
 
 sequelize
   .sync()
@@ -44,6 +48,8 @@ sequelize
 //-------------------------------------------------------------------------------------
 
 //   model schema
+
+/*
 const item = sequelize.define("item", {
   id: {
     primaryKey: true,
@@ -62,6 +68,8 @@ const item = sequelize.define("item", {
     type: DataTypes.ARRAY(DataTypes.JSON)
   }
 });
+
+*/
 
 
 
@@ -83,20 +91,20 @@ app.get("/Item/getAll", async (req, res) => {
 */
 
 app.post("/Item/create", async (req, res) => {
-  const { id, name, description, synonyms } = req.body;
+  const { name, description, groups, synonyms } = req.body;
   try {
-    const newItem = await item.create({ id, name, description, synonyms });
-    res.json(newItem);
+    const newItem = await itemModel.create({ name, description, groups, synonyms });
+    res.status(201).json(newItem);
   } catch (err) {
     console.log(err);
+    res.status(500).send("Fehler beim Erstellen des Items");
   }
 });
-
 
 app.get("/Item/getAll", async (req, res) => {
   try {
     const allItems = await item.findAll();
-    res.json(allItems);
+    res.json(allItems); 
   } catch (err) {
     console.log(err);
   }
