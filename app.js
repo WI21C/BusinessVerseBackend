@@ -3,6 +3,7 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const { Sequelize } = require("sequelize");
 const Item = require("./item");
+const Group = require("./group");
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -34,6 +35,8 @@ const sequelize = new Sequelize(process.env.DB_URL, {
 
 //Definieren des Item-Modells
 const itemModel = Item.defineModel(sequelize);
+//Definieren des Group-Modells
+const groupModel = Group.defineModel(sequelize);
 
 
 sequelize
@@ -122,4 +125,43 @@ app.get("/get-posts", async (req, res) => {
 
 app.listen(port, () => {
   console.log(`Example app listening at http://localhost:${port}`);
+});
+
+app.get("/Group/getAll", async (req, res) => {
+  try {
+    const allGroups = await groupModel.findAll();
+    res.json(allGroups); 
+  } catch (err) {
+    console.log(err);
+  }
+});
+
+app.post("/Group/create", async (req, res) => {
+  const { name, description} = req.body;
+  try {
+    const newGroup = await groupModel.create({ name, description});
+    res.status(201).json(newGroup);
+  } catch (err) {
+    console.log(err);
+    res.status(500).send("Fehler beim Erstellen des Items");
+  }
+});
+
+app.put("/Group/change/:id", async (req, res) => {
+  try {
+    const id=req.params.id
+    const aktualiserteDaten = req.body;
+    //const {name, description} = req.body;
+
+    const changeGroupId = await groupModel.findByPk(id);
+    if (!changeGroupId){
+      return res.status(404).send('Eintrag nicht gefunden')
+    }
+    await changeGroupId.update(aktualiserteDaten)
+    res.send(changeGroupId)
+    //res.status(201).json(changeGroupId);
+  } catch (err) {
+    console.log(err);
+    res.status(500).send("Fehler beim Ändern des Items");
+  }
 });

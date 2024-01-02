@@ -2,7 +2,7 @@ const { Sequelize, DataTypes } = require("sequelize");
 
 class Item {
   static defineModel(sequelize) {
-    return sequelize.define("Item", {
+    return sequelize.define("post", {
       name: {
         type: DataTypes.STRING,
         allowNull: false,
@@ -11,7 +11,11 @@ class Item {
         type: DataTypes.STRING,
         allowNull: false,
       },
-      groups: {
+      g_id:{
+        type: DataTypes.BIGINT,
+        allowNull: false,
+      }
+      /*groups: {
         type: DataTypes.ARRAY(DataTypes.STRING),
         defaultValue: [],
       },
@@ -34,7 +38,7 @@ class Item {
             this.setDataValue('synonyms', value);
           }
         },
-      },
+      },*/
     }, {
       timestamps: true,
       underscored: true,
