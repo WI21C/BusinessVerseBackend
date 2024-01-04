@@ -2,13 +2,13 @@ const { Sequelize, DataTypes } = require("sequelize");
 
 class Item {
   static defineModel(sequelize) {
-    return sequelize.define("post", {
+    return sequelize.define("item", {
       name: {
-        type: DataTypes.STRING,
+        type: DataTypes.STRING(50),
         allowNull: false,
       },
       description: {
-        type: DataTypes.STRING,
+        type: DataTypes.STRING(255),
         allowNull: false,
       },
       g_id:{

@@ -2,14 +2,14 @@ const { Sequelize, DataTypes } = require("sequelize");
 
 class Synonyms {
   static defineModel(sequelize) {
-    return sequelize.define("post", {
-      s_id: {
-        type: DataTypes.BIGINT,
-        allowNull: true,
-      },
+    return sequelize.define("synonyms", {
       name: {
         type: DataTypes.STRING(50),
         allowNull: true,
+      },
+      i_id: {
+        type: DataTypes.BIGINT,
+        allowNull: false,
       },
       software: {
         type: DataTypes.STRING(50),

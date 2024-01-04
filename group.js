@@ -2,7 +2,7 @@ const { Sequelize, DataTypes } = require("sequelize");
 
 class Groups {
   static defineModel(sequelize) {
-    return sequelize.define("Group", {
+    return sequelize.define("groups", {
       name: {
         type: DataTypes.STRING(50),
         allowNull: false,
