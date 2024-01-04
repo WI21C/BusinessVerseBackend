@@ -11,17 +11,6 @@ const port = process.env.PORT || 3000;
 app.use(bodyParser.json());
 
 
-/*
-class Item {
-  constructor(id, name, description, synonyms) {
-      this.id = id;
-      this.name = name;
-      this.description = description;
-      this.synonyms = synonyms.map(syn => new Synonym(syn.name, syn.softwares, syn.args));
-  }
-}
-*/
-
 
 const sequelize = new Sequelize(process.env.DB_URL, {
   dialect: "postgres",
@@ -88,7 +77,7 @@ app.post("/Synonym/create", async (req, res) => {
   }
 });
 
-//Gets
+//Get All
 
 app.get("/Group/getAll", async (req, res) => {
   try {
@@ -108,7 +97,7 @@ app.get("/Item/getAll", async (req, res) => {
   }
 });
 
-app.get("/Synonyms/getAll", async (req, res) => {
+app.get("/Synonym/getAll", async (req, res) => {
   try {
     const allSynonyms = await synonymsModel.findAll();
     res.json(allSynonyms); 
@@ -173,7 +162,7 @@ app.put("/Synonym/change/:id", async (req, res) => {
 
 //get by id
 
-app.get("/Item/getbyid/:id", async (req, res) => {
+app.get("/Item/getById/:id", async (req, res) => {
   try {
     const id=req.params.id;
 
@@ -187,7 +176,7 @@ app.get("/Item/getbyid/:id", async (req, res) => {
   }
 });
 
-app.get("/Group/getbyid/:id", async (req, res) => {
+app.get("/Group/getById/:id", async (req, res) => {
   try {
     const id=req.params.id;
     
@@ -201,7 +190,7 @@ app.get("/Group/getbyid/:id", async (req, res) => {
   }
 });
 
-app.get("/Synonym/getbyid/:id", async (req, res) => {
+app.get("/Synonym/getById/:id", async (req, res) => {
   try {
     const id=req.params.id;
     
