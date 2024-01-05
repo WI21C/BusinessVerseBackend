@@ -10,12 +10,12 @@ class Item {
       description: {
         type: DataTypes.STRING(255),
         allowNull: false,
-      },
+      }/*,
       g_id:{
         type: DataTypes.BIGINT,
         allowNull: false,
       }
-      /*groups: {
+      groups: {
         type: DataTypes.ARRAY(DataTypes.STRING),
         defaultValue: [],
       },

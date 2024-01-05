@@ -10,7 +10,7 @@ class Groups {
       description: {
         type: DataTypes.STRING(255),
         allowNull: true,
-      }
+      },
     }, {
       timestamps: true,
       underscored: true,

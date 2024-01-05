@@ -3,6 +3,11 @@ const { Sequelize, DataTypes } = require("sequelize");
 class Synonyms {
   static defineModel(sequelize) {
     return sequelize.define("synonyms", {
+      s_id: {
+        type: DataTypes.BIGINT,
+        autoIncrement: true,
+        primaryKey: true
+      },
       name: {
         type: DataTypes.STRING(50),
         allowNull: true,
@@ -16,7 +21,7 @@ class Synonyms {
         allowNull: true,
       },
     }, {
-      timestamps: true,
+      timestamps: false,
       underscored: true,
     });
   }

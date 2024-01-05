@@ -1,10 +1,11 @@
 require("dotenv").config();
 const express = require("express");
 const bodyParser = require("body-parser");
-const { Sequelize } = require("sequelize");
+const { Sequelize, where } = require("sequelize");
 const Item = require("./item");
 const Group = require("./group");
 const Synonyms = require("./synonyms");
+const GroupItem = require("./GroupItem");
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -29,6 +30,8 @@ const itemModel = Item.defineModel(sequelize);
 const groupModel = Group.defineModel(sequelize);
 //Definieren des Synonym-Modells
 const synonymsModel = Synonyms.defineModel(sequelize);
+//Definiere das GroupItem Modell
+const groupItemModel = GroupItem.defineModel(sequelize);
 
 
 sequelize
@@ -45,9 +48,9 @@ sequelize
 //Posts
 
 app.post("/Item/create", async (req, res) => {
-  const { name, description, g_id } = req.body;
+  const { name, description } = req.body;
   try {
-    const newItem = await itemModel.create({ name, description, g_id });
+    const newItem = await itemModel.create({ name, description });
     res.status(201).json(newItem);
   } catch (err) {
     console.log(err);
@@ -56,13 +59,13 @@ app.post("/Item/create", async (req, res) => {
 });
 
 app.post("/Group/create", async (req, res) => {
-  const { name, description} = req.body;
+  const { name, description, items} = req.body;
   try {
-    const newGroup = await groupModel.create({ name, description});
+    const newGroup = await groupModel.create({ name, description, items});
     res.status(201).json(newGroup);
   } catch (err) {
     console.log(err);
-    res.status(500).send("Fehler beim Erstellen des Items");
+    res.status(500).send("Fehler beim Erstellen der Group");
   }
 });
 
@@ -71,6 +74,17 @@ app.post("/Synonym/create", async (req, res) => {
   try {
     const newSynonym = await synonymsModel.create({ name, i_id, software});
     res.status(201).json(newSynonym);
+  } catch (err) {
+    console.log(err);
+    res.status(500).send("Fehler beim Erstellen des Items");
+  }
+});
+
+app.post("/GroupItem/create", async (req, res) => {
+  const { i_id, g_id } = req.body;
+  try {
+    const newGroupItem = await groupItemModel.create({ i_id, g_id });
+    res.status(201).json(newGroupItem);
   } catch (err) {
     console.log(err);
     res.status(500).send("Fehler beim Erstellen des Items");
@@ -88,6 +102,30 @@ app.get("/Group/getAll", async (req, res) => {
   }
 });
 
+
+app.get("/Group/getAllItems", async (req, res) => {
+  try {
+    const allGroups = await groupModel.findAll();
+    // Asynchron alle zugehörigen Items für jede Gruppe abrufen
+    const groupAndItems = await Promise.all(allGroups.map(async group => {
+      const items = await groupItemModel.findAll({
+        where: { g_id: group.id },
+        attributes: ['i_id'] // Annahme, dass die Spalte im itemModel 'g_id' heißt
+      });
+      const itemIds = items.map(item => parseInt(item.i_id))
+      return {
+        ...group.toJSON(), // oder group.dataValues, abhängig von Ihrem ORM
+        items: itemIds // Fügt die zugehörigen Items zu jeder Gruppe hinzu
+      };
+    }));
+    res.json(groupAndItems);
+  } catch (err) {
+    console.log(err);
+    res.status(500).send("Probleme bei dem Abrufen");
+  }
+});
+
+
 app.get("/Item/getAll", async (req, res) => {
   try {
     const allItems = await itemModel.findAll();
@@ -101,6 +139,15 @@ app.get("/Synonym/getAll", async (req, res) => {
   try {
     const allSynonyms = await synonymsModel.findAll();
     res.json(allSynonyms); 
+  } catch (err) {
+    console.log(err);
+  }
+});
+
+app.get("/GroupItem/getAll", async (req, res) => {
+  try {
+    const allGroupItems = await groupItemModel.findAll();
+    res.json(allGroupItems); 
   } catch (err) {
     console.log(err);
   }
@@ -160,6 +207,23 @@ app.put("/Synonym/change/:id", async (req, res) => {
   }
 });
 
+app.put("/GroupItem/change/:id", async (req, res) => {
+  try {
+    const id=req.params.id;
+    const aktualiserteDaten = req.body;
+
+    const changeGroupItemId = await groupItemModel.findByPk(id);
+    if (!changeGroupItemId){
+      return res.status(404).send('Eintrag nicht gefunden')
+    }
+    await changeGroupItemId.update(aktualiserteDaten)
+    res.send(changeGroupItemId)
+  } catch (err) {
+    console.log(err);
+    res.status(500).send("Fehler beim Ändern des GroupItems");
+  }
+});
+
 //get by id
 
 app.get("/Item/getById/:id", async (req, res) => {
@@ -204,14 +268,96 @@ app.get("/Synonym/getById/:id", async (req, res) => {
   }
 });
 
+//delete
 
+app.delete("/Group/deleteById/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+
+    // Überprüfen, ob die Gruppe existiert
+    const groupToDelete = await groupModel.findByPk(id);
+    if (!groupToDelete) {
+      return res.status(404).send('Eintrag nicht gefunden');
+    }
+
+    // Löschen der Gruppe
+    await groupModel.destroy({
+      where: { id: id }
+    });
+
+    res.send('Eintrag erfolgreich gelöscht');
+  } catch (err) {
+    console.log(err);
+    res.status(500).send('Probleme beim Löschen des Eintrags');
+  }
+});
+
+app.delete("/Item/deleteById/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+
+    // Überprüfen, ob die Gruppe existiert
+    const itemToDelete = await itemModel.findByPk(id);
+    if (!itemToDelete) {
+      return res.status(404).send('Eintrag nicht gefunden');
+    }
+
+    // Löschen der Gruppe
+    await itemModel.destroy({
+      where: { id: id }
+    });
+
+    res.send('Eintrag erfolgreich gelöscht');
+  } catch (err) {
+    console.log(err);
+    res.status(500).send('Probleme beim Löschen des Eintrags');
+  }
+});
+
+app.delete("/Synonym/deleteById/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+
+    // Überprüfen, ob die Gruppe existiert
+    const synonymToDelete = await synonymsModel.findByPk(id);
+    if (!synonymToDelete) {
+      return res.status(404).send('Eintrag nicht gefunden');
+    }
+
+    // Löschen der Gruppe
+    await synonymsModel.destroy({
+      where: { s_id: id }
+    });
+
+    res.send('Eintrag erfolgreich gelöscht');
+  } catch (err) {
+    console.log(err);
+    res.status(500).send('Probleme beim Löschen des Eintrags');
+  }
+});
+
+app.delete("/GroupItem/deleteById/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+
+    // Überprüfen, ob die Gruppe existiert
+    const groupItemToDelete = await groupItemModel.findByPk(id);
+    if (!groupItemToDelete) {
+      return res.status(404).send('Eintrag nicht gefunden');
+    }
+
+    // Löschen der Gruppe
+    await groupItemModel.destroy({
+      where: { id: id }
+    });
+
+    res.send('Eintrag erfolgreich gelöscht');
+  } catch (err) {
+    console.log(err);
+    res.status(500).send('Probleme beim Löschen des Eintrags');
+  }
+});
 
 app.listen(port, () => {
   console.log(`Example app listening at http://localhost:${port}`);
 });
-
-
-
-
-
-
