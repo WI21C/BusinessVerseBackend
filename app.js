@@ -128,6 +128,44 @@ app.get("/Group/getAllItems", async (req, res) => {
 });
 
 
+app.get("/Item/get/:id", async (req, res) => {
+  try {
+    const id=req.params.id;
+    const item = await itemModel.findByPk(id);
+    // Asynchron alle zugehörigen Items für jede Gruppe abrufen
+    /*
+    const itemsAndSyns = await Promise.all(allGroups.map(async group => {
+      const items = await groupItemModel.findAll({
+        where: { g_id: group.id },
+        attributes: ['i_id'] // Annahme, dass die Spalte im itemModel 'g_id' heißt
+      });
+      const itemIds = items.map(item => parseInt(item.i_id))
+      return {
+        ...group.toJSON(), // oder group.dataValues, abhängig von Ihrem ORM
+        items: itemIds // Fügt die zugehörigen Items zu jeder Gruppe hinzu
+      };
+    }));
+
+    */
+
+    const combined= await item.map(async item => {
+      const synonyms = await synonymsModel.findAll({
+      where: {i_id: item.id}
+    });
+    return {
+      ...item.toJSON(),
+      item: synonyms
+    };
+    })
+    res.json(combined);
+  } catch (err) {
+    console.log(err);
+    res.status(500).send("Probleme bei dem Abrufen");
+  }
+});
+
+
+
 app.get("/Item/getAll", async (req, res) => {
   try {
     const allItems = await itemModel.findAll();
