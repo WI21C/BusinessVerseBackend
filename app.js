@@ -175,6 +175,27 @@ app.get("/Item/getAll", async (req, res) => {
   }
 });
 
+app.get("/Item/getAllSyns", async (req, res) => {
+  try {
+    const allItems = await itemModel.findAll();
+    // Asynchron alle zugehörigen Items für jede Gruppe abrufen
+    const itemAndSyns = await Promise.all(allItems.map(async item => {
+      const synonyms = await synonymsModel.findAll({
+        where: { i_id: item.id }
+        //attributes: ['i_id'] // Annahme, dass die Spalte im itemModel 'g_id' heißt
+      });
+      return {
+        ...item.toJSON(), // oder group.dataValues, abhängig von Ihrem ORM
+        synonyms: synonyms // Fügt die zugehörigen Items zu jeder Gruppe hinzu
+      };
+    }));
+    res.json(itemAndSyns);
+  } catch (err) {
+    console.log(err);
+    res.status(500).send("Probleme bei dem Abrufen");
+  }
+});
+
 app.get("/Synonym/getAll", async (req, res) => {
   try {
     const allSynonyms = await synonymsModel.findAll();
