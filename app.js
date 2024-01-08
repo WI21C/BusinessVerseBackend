@@ -6,8 +6,10 @@ const Item = require("./item");
 const Group = require("./group");
 const Synonyms = require("./synonyms");
 const GroupItem = require("./GroupItem");
+const cors = require("cors")
 
 const app = express();
+app.use(cors());
 const port = process.env.PORT || 3000;
 app.use(bodyParser.json());
 
