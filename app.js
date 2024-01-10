@@ -6,7 +6,8 @@ const Item = require("./item");
 const Group = require("./group");
 const Synonyms = require("./synonyms");
 const GroupItem = require("./GroupItem");
-const cors = require("cors")
+const User = require("./user");
+const cors = require("cors");
 
 const app = express();
 app.use(cors());
@@ -34,6 +35,8 @@ const groupModel = Group.defineModel(sequelize);
 const synonymsModel = Synonyms.defineModel(sequelize);
 //Definiere das GroupItem Modell
 const groupItemModel = GroupItem.defineModel(sequelize);
+//Definieren des User Modells
+const userModel = User.defineModel(sequelize);
 
 
 sequelize
@@ -92,6 +95,26 @@ app.post("/GroupItem/create", async (req, res) => {
     res.status(500).send("Fehler beim Erstellen des Items");
   }
 });
+
+app.post("/User/create", async (req, res) => {
+  const { u_id, name, email, password } = req.body;
+  try {
+    // Checken, ob es die email schon gibt
+    const existingUser = await userModel.findOne({ where: { email: email } });
+
+    if (existingUser) {
+      return res.status(400).json({ error: 'Email already exists in the database' });
+    }
+
+    // falls die email noch frei ist erstelle neuen user
+    const newUser = await userModel.create({ u_id, name, email, password });
+    res.status(201).json(newUser);
+  } catch (err) {
+    console.log(err);
+    res.status(500).send("Error creating user");
+  }
+});
+
 
 //Get All
 
@@ -214,6 +237,17 @@ app.get("/GroupItem/getAll", async (req, res) => {
   }
 });
 
+app.get("/User/getAllUsers", async (req, res) => {
+  try {
+    const allUsers = await userModel.findAll();
+    res.json(allUsers);
+  } catch (err) {
+    console.log(err);
+    res.status(500).send("Error retrieving all users");
+  }
+});
+
+
 
 //Puts
 
@@ -285,6 +319,25 @@ app.put("/GroupItem/change/:id", async (req, res) => {
   }
 });
 
+app.put("/User/changeUser/:id", async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const updatedData = req.body;
+
+    const userToUpdate = await userModel.findByPk(userId);
+    if (!userToUpdate){
+      return res.status(404).send('User not found')
+    }
+
+    await userToUpdate.update(updatedData);
+    res.send(userToUpdate);
+  } catch (err) {
+    console.log(err);
+    res.status(500).send("Error updating user");
+  }
+});
+
+
 //get by id
 
 app.get("/Item/getById/:id", async (req, res) => {
@@ -328,6 +381,23 @@ app.get("/Synonym/getById/:id", async (req, res) => {
     console.log(err);
   }
 });
+
+app.get("/User/getUser/:id", async (req, res) => {
+  try {
+    const u_id = req.params.id;
+    
+    const user = await userModel.findByPk(u_id);
+    if (!user){
+      return res.status(404).send('User not found')
+    }
+    res.json(user); 
+  } catch (err) {
+    console.log(err);
+    res.status(500).send("Error retrieving user");
+  }
+});
+
+
 
 //delete
 
@@ -418,6 +488,51 @@ app.delete("/GroupItem/deleteById/:id", async (req, res) => {
     res.status(500).send('Probleme beim Löschen des Eintrags');
   }
 });
+
+app.delete("/User/deleteUser/:id", async (req, res) => {
+  try {
+    const userId = req.params.id;
+
+    // Check if the user exists
+    const userToDelete = await userModel.findByPk(userId);
+    if (!userToDelete) {
+      return res.status(404).send('User not found');
+    }
+
+    // Delete the user
+    await userModel.destroy({
+      where: { u_id: userId }
+    });
+
+    res.send('User successfully deleted');
+  } catch (err) {
+    console.log(err);
+    res.status(500).send('Problem deleting the user');
+  }
+});
+
+// Methode funktioniert, wenn die Attribute als Teil der URL, also  http://localhost:5432/User/checkLogin?email=Luis@dhbw.com&password=Passwort€99, übergeben werden. Eventuell nochmal mit Frontend über Passwörter reden und gemeinsam testen
+app.get("/User/checkLogin", async (req, res) => {
+  const { email, password } = req.query;
+  try {
+    const user = await userModel.findOne({ where: { email: email } });
+
+    if (!user) {
+      return res.status(404).send('User not found');
+    }
+
+    // Vergleiche das eingegebene Passwort mit dem in der Datenbank gespeicherten Passwort
+    if (user.password === password) {
+      return res.json({ user, success: true });
+    } else {
+      return res.json({ ID: null, success: false, error: 'Invalid credentials' });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(500).send("Error checking login");
+  }
+});
+
 
 app.listen(port, () => {
   console.log(`Example app listening at http://localhost:${port}`);
