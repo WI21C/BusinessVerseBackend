@@ -128,17 +128,53 @@ app.get("/Group/getAll", async (req, res) => {
   }
 });
 
-
 app.get("/Group/getAllItems", async (req, res) => {
+  try {
+    const allGroups = await groupModel.findAll();
+    const groupAndItems = await Promise.all(allGroups.map(async group => {
+      const items = await groupItemModel.findAll({
+        where: { g_id: group.id },
+        attributes: ['i_id']
+      });
+
+      let itemIds = [];
+      // Überprüfen, ob 'items' definiert und ein Array ist
+      if (items && Array.isArray(items)) {
+        itemIds = items.map(item => item.i_id);
+      }
+
+      return {
+        ...group.toJSON(),
+        items: itemIds
+      };
+    }));
+    res.json(groupAndItems);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Probleme bei dem Abrufen");
+  }
+});
+
+
+
+/*app.get("/Group/getAllItems", async (req, res) => {
   try {
     const allGroups = await groupModel.findAll();
     // Asynchron alle zugehörigen Items für jede Gruppe abrufen
     const groupAndItems = await Promise.all(allGroups.map(async group => {
-      const items = await groupItemModel.findAll({
+      const [items] = await groupItemModel.findAll({
         where: { g_id: group.id },
         attributes: ['i_id'] // Annahme, dass die Spalte im itemModel 'g_id' heißt
       });
-      const itemIds = items.map(item => parseInt(item.i_id))
+
+      let itemIds = [];
+      if (items.length !== 0) {
+        itemIds = items.map(item => item.i_id);
+      }
+
+      if (items.length !== 0){
+        const itemIds = items.map(item => item.i_id )
+      }
       return {
         ...group.toJSON(), // oder group.dataValues, abhängig von Ihrem ORM
         items: itemIds // Fügt die zugehörigen Items zu jeder Gruppe hinzu
@@ -150,6 +186,7 @@ app.get("/Group/getAllItems", async (req, res) => {
     res.status(500).send("Probleme bei dem Abrufen");
   }
 });
+*/
 
 
 app.get("/Item/get/:id", async (req, res) => {
