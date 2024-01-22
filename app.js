@@ -556,7 +556,7 @@ app.delete("/User/deleteUser/:id", async (req, res) => {
 });
 
 // Methode funktioniert, wenn die Attribute als Teil der URL, also  http://localhost:5432/User/checkLogin?email=Luis@dhbw.com&password=Passwort€99, übergeben werden. Eventuell nochmal mit Frontend über Passwörter reden und gemeinsam testen
-app.post("/User/checkLogin", async (req, res) => {
+app.get("/User/checkLogin", async (req, res) => {
   const { email, password } = req.body;
   console.log(email, password);
 
