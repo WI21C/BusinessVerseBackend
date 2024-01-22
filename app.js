@@ -53,7 +53,7 @@ sequelize
 
 //Posts
 
-app.post("/Item/create", async (req, res) => {
+/*app.post("/Item/create", async (req, res) => {
   const { name, description } = req.body;
   try {
     const newItem = await itemModel.create({ name, description });
@@ -63,6 +63,127 @@ app.post("/Item/create", async (req, res) => {
     res.status(500).send("Fehler beim Erstellen des Items");
   }
 });
+*/
+
+
+app.post("/Item/create", async (req, res) => {
+  const { name, description, group, synonyms } = req.body;
+  try {
+    // Erstellen eines neuen Items
+    const newItem = await itemModel.create({ name, description });
+
+    // Verarbeiten der Synonyme, falls vorhanden
+    let createdSynonyms = [];
+    if (Array.isArray(synonyms)) {
+      for (const synonym of synonyms) {
+        const createdSynonym = await synonymsModel.create({
+          ...synonym,
+          itemId: newItem.id // Annahme, dass itemId das Feld ist, das das Item referenziert
+        });
+        createdSynonyms.push(createdSynonym);
+      }
+    }
+
+    // Überprüfen, ob eine groupId bereitgestellt wurde
+    if (group) {
+      // Erstellen eines neuen GroupItem
+      const newGroupItem = await groupItemModel.create({
+        i_id: newItem.id,  // Annahme, dass _id die ID des Items ist
+        g_id: group
+      });
+
+      // Rückgabe aller erstellten Objekte
+      res.status(201).json({ item: newItem, groupItem: newGroupItem, synonyms: createdSynonyms });
+    } else {
+      // Falls keine groupId vorhanden ist, nur das Item und Synonyme zurückgeben
+      res.status(201).json({ item: newItem, synonyms: createdSynonyms });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(500).send("Fehler beim Erstellen des Items");
+  }
+});
+
+
+/*app.post("/Item/create", async (req, res) => {
+  const { name, description, group, synonyms } = req.body;
+  try {
+    // Erstellen eines neuen Items
+    const newItem = await itemModel.create({ name, description });
+
+    // Überprüfen, ob eine groupId bereitgestellt wurde
+    if (group) {
+      // Erstellen eines neuen GroupItem
+      const newGroupItem = await groupItemModel.create({
+        i_id: newItem.id,  // Annahme, dass _id die ID des Items ist
+        g_id: group
+      });
+
+      // Rückgabe beider erstellter Objekte
+      res.status(201).json({ item: newItem, groupItem: newGroupItem });
+    } else {
+      // Falls keine groupId vorhanden ist, nur das Item zurückgeben
+      res.status(201).json(newItem);
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(500).send("Fehler beim Erstellen des Items");
+  }
+});
+*/
+
+
+app.put("/Item/update/:id", async (req, res) => {
+  const { id } = req.params;
+  const { name, description, group, synonyms } = req.body;
+
+  try {
+    // Suchen des Items über seine ID
+    const itemToUpdate = await itemModel.findByPk(id);
+
+    // Überprüfen, ob das Item existiert
+    if (!itemToUpdate) {
+      return res.status(404).send("Item nicht gefunden");
+    }
+
+    // Aktualisieren des Items
+    const updatedItem = await itemToUpdate.update({ name, description });
+
+    // Verarbeiten der Synonyme, falls vorhanden
+    let updatedSynonyms = [];
+    if (Array.isArray(synonyms)) {
+      // Löschen alter Synonyme (optional, abhängig von Geschäftslogik)
+      await synonymsModel.destroy({ where: { i_id: id } });
+
+      for (const synonym of synonyms) {
+        const updatedSynonym = await synonymsModel.create({
+          ...synonym,
+          itemId: id
+        });
+        updatedSynonyms.push(updatedSynonym);
+      }
+    }
+
+    // Aktualisieren der Gruppenzugehörigkeit, falls vorhanden
+    if (group) {
+      // Aktualisieren oder Erstellen eines neuen GroupItem
+      const [updatedGroupItem, created] = await groupItemModel.upsert({
+        i_id: id,
+        g_id: group
+      }, { returning: true });
+
+      // Rückgabe aller aktualisierten Objekte
+      res.status(200).json({ item: updatedItem, groupItem: updatedGroupItem, synonyms: updatedSynonyms });
+    } else {
+      // Falls keine groupId vorhanden ist, nur das Item und Synonyme zurückgeben
+      res.status(200).json({ item: updatedItem, synonyms: updatedSynonyms });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(500).send("Fehler beim Aktualisieren des Items");
+  }
+});
+
 
 app.post("/Group/create", async (req, res) => {
   const { name, description, items} = req.body;
@@ -288,6 +409,8 @@ app.get("/User/getAllUsers", async (req, res) => {
 
 
 //Puts
+
+
 
 app.put("/Group/change/:id", async (req, res) => {
   try {

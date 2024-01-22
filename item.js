@@ -1,8 +1,17 @@
 const { Sequelize, DataTypes } = require("sequelize");
+const { v4: uuidv4 } = require('uuid');
+
 
 class Item {
   static defineModel(sequelize) {
     return sequelize.define("item", {
+      id: {
+        type: DataTypes.UUID, // Use UUID data type
+        defaultValue: () => uuidv4(), // Use the default value with uuid_generate_v4()
+        primaryKey: true,
+        allowNull: true,
+        unique: true,
+      },
       name: {
         type: DataTypes.STRING(50),
         allowNull: false,
@@ -10,35 +19,7 @@ class Item {
       description: {
         type: DataTypes.STRING(255),
         allowNull: false,
-      }/*,
-      g_id:{
-        type: DataTypes.BIGINT,
-        allowNull: false,
       }
-      groups: {
-        type: DataTypes.ARRAY(DataTypes.STRING),
-        defaultValue: [],
-      },
-      synonyms: {
-        type: DataTypes.ARRAY(DataTypes.JSON),
-        defaultValue: [],
-        get() {
-          const rawValue = this.getDataValue('synonyms');
-          if (rawValue && Array.isArray(rawValue)) {
-            return rawValue.map((synonym) => ({
-              name: synonym.name,
-              softwares: synonym.softwares,
-              args: synonym.args,
-            }));
-          }
-          return [];
-        },
-        set(value) {
-          if (Array.isArray(value)) {
-            this.setDataValue('synonyms', value);
-          }
-        },
-      },*/
     }, {
       timestamps: true,
       underscored: true,
