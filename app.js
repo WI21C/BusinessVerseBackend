@@ -681,6 +681,7 @@ app.delete("/User/deleteUser/:id", async (req, res) => {
 // Methode funktioniert, wenn die Attribute als Teil der URL, also  http://localhost:5432/User/checkLogin?email=Luis@dhbw.com&password=Passwort€99, übergeben werden. Eventuell nochmal mit Frontend über Passwörter reden und gemeinsam testen
 app.get("/User/checkLogin", async (req, res) => {
   const { email, password } = req.body;
+  console.log(email, password);
 
   if (!email || !password) {
     return res.status(400).send('Both email and password are required');
@@ -690,7 +691,7 @@ app.get("/User/checkLogin", async (req, res) => {
     const user = await userModel.findOne({ where: { email: email } });
 
     if (!user) {
-      return res.status(404).send('User not found');
+      return res.status(405).send('User not found');
     }
 
     // Vergleiche das eingegebene Passwort mit dem in der Datenbank gespeicherten Passwort
