@@ -227,7 +227,7 @@ app.get("/Item/get/:id", async (req, res) => {
 
 
 
-app.get("/Item/getAll", async (req, res) => {
+app.get("/Item/getAllItems", async (req, res) => {
   try {
     const allItems = await itemModel.findAll();
     res.json(allItems); 
@@ -236,7 +236,7 @@ app.get("/Item/getAll", async (req, res) => {
   }
 });
 
-app.get("/Item/getAllSyns", async (req, res) => {
+app.get("/Item/getAll", async (req, res) => {
   try {
     const allItems = await itemModel.findAll();
     // Asynchron alle zugehörigen Items für jede Gruppe abrufen
