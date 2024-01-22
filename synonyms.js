@@ -4,8 +4,8 @@ class Synonyms {
   static defineModel(sequelize) {
     return sequelize.define("synonyms", {
       s_id: {
-        type: DataTypes.BIGINT,
-        autoIncrement: true,
+        type: DataTypes.UUID, // Use UUID data type
+        defaultValue: Sequelize.literal('uuid_generate_v4()'), // Use the default value with uuid_generate_v4()
         primaryKey: true
       },
       name: {
@@ -13,7 +13,8 @@ class Synonyms {
         allowNull: true,
       },
       i_id: {
-        type: DataTypes.BIGINT,
+        type: DataTypes.UUID, // Use UUID data type
+        defaultValue: Sequelize.literal('uuid_generate_v4()'), // Use the default value with uuid_generate_v4()
         allowNull: false,
       },
       software: {

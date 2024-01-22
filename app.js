@@ -8,6 +8,7 @@ const Synonyms = require("./synonyms");
 const GroupItem = require("./GroupItem");
 const User = require("./user");
 const cors = require("cors");
+const bcrypt = require("bcrypt");
 
 const app = express();
 app.use(cors());
@@ -97,7 +98,7 @@ app.post("/GroupItem/create", async (req, res) => {
 });
 
 app.post("/User/create", async (req, res) => {
-  const { u_id, name, email, password } = req.body;
+  const { id, name, email, password } = req.body;
   try {
     // Checken, ob es die email schon gibt
     const existingUser = await userModel.findOne({ where: { email: email } });
@@ -107,14 +108,14 @@ app.post("/User/create", async (req, res) => {
     }
 
     // falls die email noch frei ist erstelle neuen user
-    const newUser = await userModel.create({ u_id, name, email, password });
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newUser = await userModel.create({ id, name, email, password: hashedPassword });
     res.status(201).json(newUser);
   } catch (err) {
     console.log(err);
     res.status(500).send("Error creating user");
   }
 });
-
 
 //Get All
 
@@ -325,9 +326,15 @@ app.put("/User/changeUser/:id", async (req, res) => {
     const updatedData = req.body;
 
     const userToUpdate = await userModel.findByPk(userId);
-    if (!userToUpdate){
-      return res.status(404).send('User not found')
+    if (!userToUpdate) {
+      return res.status(404).send('User not found');
     }
+
+    if (updatedData.password){
+      //erst hashen vor dem updaten
+      const hashedPassword = await bcrypt.hash(updatedData.password, 10);
+      updatedData.password = hashedPassword;
+      }
 
     await userToUpdate.update(updatedData);
     res.send(userToUpdate);
@@ -513,7 +520,12 @@ app.delete("/User/deleteUser/:id", async (req, res) => {
 
 // Methode funktioniert, wenn die Attribute als Teil der URL, also  http://localhost:5432/User/checkLogin?email=Luis@dhbw.com&password=Passwort€99, übergeben werden. Eventuell nochmal mit Frontend über Passwörter reden und gemeinsam testen
 app.get("/User/checkLogin", async (req, res) => {
-  const { email, password } = req.query;
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).send('Both email and password are required');
+  }
+
   try {
     const user = await userModel.findOne({ where: { email: email } });
 
@@ -522,11 +534,13 @@ app.get("/User/checkLogin", async (req, res) => {
     }
 
     // Vergleiche das eingegebene Passwort mit dem in der Datenbank gespeicherten Passwort
-    if (user.password === password) {
+    const isValidPassword = await bcrypt.compare(password, user.password);
+    if (isValidPassword) {
       return res.json({ user, success: true });
     } else {
       return res.json({ ID: null, success: false, error: 'Invalid credentials' });
     }
+
   } catch (err) {
     console.log(err);
     res.status(500).send("Error checking login");

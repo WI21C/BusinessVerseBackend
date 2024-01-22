@@ -5,10 +5,12 @@ class User {
     return sequelize.define(
       "users",
       {
-        u_id: {
-          type: DataTypes.BIGINT,
-          autoIncrement: true,
-          primaryKey: true
+        id: {
+          type: DataTypes.UUID, // Use UUID data type
+          defaultValue: Sequelize.literal('uuid_generate_v4()'), // Use the default value with uuid_generate_v4()
+          primaryKey: true,
+          allowNull: false,
+          unique: true,
         },
         name: {
           type: DataTypes.STRING(50),
