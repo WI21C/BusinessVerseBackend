@@ -78,7 +78,7 @@ app.post("/Item/create", async (req, res) => {
       for (const synonym of synonyms) {
         const createdSynonym = await synonymsModel.create({
           ...synonym,
-          itemId: newItem.id // Annahme, dass itemId das Feld ist, das das Item referenziert
+          i_id: newItem.id // Annahme, dass itemId das Feld ist, das das Item referenziert
         });
         createdSynonyms.push(createdSynonym);
       }
@@ -391,14 +391,17 @@ app.put("/Item/update/:id", async (req, res) => {
         updatedSynonyms.push(updatedSynonym);
       }
     }
-
     // Aktualisieren der Gruppenzugehörigkeit, falls vorhanden
     if (group) {
-      // Aktualisieren oder Erstellen eines neuen GroupItem
-      const [updatedGroupItem, created] = await groupItemModel.upsert({
-        i_id: id,
-        g_id: group
-      }, { returning: true });
+      // Suchen oder Erstellen eines GroupItem
+      const [updatedGroupItem, created] = await groupItemModel.findOrCreate({
+        where: { i_id: id },
+        defaults: { i_id: id, g_id: group }
+      });
+
+      if (!created) {
+        await updatedGroupItem.update({ g_id: group });
+      }
 
       // Rückgabe aller aktualisierten Objekte
       res.status(200).json({ item: updatedItem, groupItem: updatedGroupItem, synonyms: updatedSynonyms });
@@ -406,6 +409,7 @@ app.put("/Item/update/:id", async (req, res) => {
       // Falls keine groupId vorhanden ist, nur das Item und Synonyme zurückgeben
       res.status(200).json({ item: updatedItem, synonyms: updatedSynonyms });
     }
+
   } catch (err) {
     console.log(err);
     res.status(500).send("Fehler beim Aktualisieren des Items");
@@ -611,6 +615,43 @@ app.delete("/Item/deleteById/:id", async (req, res) => {
     res.status(500).send('Probleme beim Löschen des Eintrags');
   }
 });
+
+app.delete("/Item/delete/:id", async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // Starten einer Transaktion
+    const transaction = await sequelize.transaction();
+
+    // Löschen der Synonyme
+    await synonymsModel.destroy({ where: { i_id: id } }, { transaction });
+
+    // Löschen des zugehörigen groupItems
+    await groupItemModel.destroy({ where: { i_id: id } }, { transaction });
+
+    // Löschen des Items selbst
+    const deleteResult = await itemModel.destroy({ where: { id: id } }, { transaction });
+
+    // Überprüfen, ob das Item existierte und gelöscht wurde
+    if (deleteResult === 0) {
+      // Wenn das Item nicht gefunden wurde, Transaktion zurückrollen und Fehlermeldung senden
+      await transaction.rollback();
+      return res.status(404).send("Item nicht gefunden");
+    }
+
+    // Commit der Transaktion
+    await transaction.commit();
+
+    // Rückmeldung, dass das Item und seine Verknüpfungen erfolgreich gelöscht wurden
+    res.status(200).send(`Item mit der ID ${id} und alle zugehörigen Daten wurden erfolgreich gelöscht.`);
+  } catch (err) {
+    console.log(err);
+    // Im Fehlerfall Transaktion zurückrollen
+    if (transaction) await transaction.rollback();
+    res.status(500).send("Fehler beim Löschen des Items");
+  }
+});
+
 
 app.delete("/Synonym/deleteById/:id", async (req, res) => {
   try {
