@@ -364,8 +364,8 @@ app.get("/Item/getAll", async (req, res) => {
         where: { i_id: item.id }
       });
 
-      const transformedSynonyms = await synonyms.map(synonym => {
-        const synonymData = synonym.toJSON(); 
+      const transformedSynonyms = synonyms.map(synonym => {
+        const synonymData = synonym.toJSON();
         let argsArray = [];
 
         for (let i = 1; i <= 15; i++) {
@@ -376,13 +376,15 @@ app.get("/Item/getAll", async (req, res) => {
         }
 
         return {
-          ...synonymData,
+          id: synonymData.id,
+          name: synonymData.name,
+          software: synonymData.software,
           args: argsArray
         };
       });
 
       return {
-        ...item.toJSON(), 
+        ...item.toJSON(),
         synonyms: transformedSynonyms
       };
     }));
@@ -392,6 +394,7 @@ app.get("/Item/getAll", async (req, res) => {
     res.status(500).send("Probleme bei dem Abrufen");
   }
 });
+
 
 
 
