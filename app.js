@@ -69,61 +69,49 @@ sequelize
 app.post("/Item/create", async (req, res) => {
   const { name, description, group, synonyms } = req.body;
   try {
-    // Erstellen eines neuen Items
     const newItem = await itemModel.create({ name, description });
-
-    // Verarbeiten der Synonyme, falls vorhanden
-    /*let createdSynonyms = [];
-    if (Array.isArray(synonyms)) {
-      for (const synonym of synonyms) {
-        const createdSynonym = await synonymsModel.create({
-          ...synonym,
-          i_id: newItem.id // Annahme, dass itemId das Feld ist, das das Item referenziert
-        });
-        createdSynonyms.push(createdSynonym);
-      }
-    }
-    */
 
     let createdSynonyms = [];
     if (Array.isArray(synonyms)) {
       for (const synonym of synonyms) {
-        // Erstelle ein Objekt für das synonym-Modell
         let synonymModelObject = {
           name: synonym.name,
-          i_id: newItem.id, // Annahme, dass itemId das Feld ist, das das Item referenziert
+          i_id: newItem.id,
           software: synonym.software
         };
-    
-        // Füge args-Felder aus dem arg-Array hinzu
+
+        let argsArray = [];
         if (Array.isArray(synonym.arg)) {
           synonym.arg.forEach((argValue, index) => {
-            if (index < 15) { // Stelle sicher, dass nicht mehr als 15 args hinzugefügt werden
-              synonymModelObject[`args${index + 1}`] = argValue;
+            if (index < 15) {
+              argsArray.push(argValue);
             }
           });
         }
-    
-        // Erstelle das Synonym im Modell
+        synonymModelObject.args = argsArray;
+
         const createdSynonym = await synonymsModel.create(synonymModelObject);
-        createdSynonyms.push(createdSynonym);
+
+        let synonymOutputObject = JSON.parse(JSON.stringify(createdSynonym));
+        synonymOutputObject.args = argsArray;
+
+        // Entfernen von args1 bis args15 aus dem Antwortobjekt
+        for (let i = 1; i <= 15; i++) {
+          delete synonymOutputObject[`args${i}`];
+        }
+
+        createdSynonyms.push(synonymOutputObject);
       }
     }
-    
 
-
-    // Überprüfen, ob eine groupId bereitgestellt wurde
     if (group) {
-      // Erstellen eines neuen GroupItem
       const newGroupItem = await groupItemModel.create({
-        i_id: newItem.id,  // Annahme, dass _id die ID des Items ist
+        i_id: newItem.id,
         g_id: group
       });
 
-      // Rückgabe aller erstellten Objekte
-      res.status(201).json({ item: newItem, synonyms: createdSynonyms });
+      res.status(201).json({ item: newItem, groupItem: newGroupItem, synonyms: createdSynonyms });
     } else {
-      // Falls keine groupId vorhanden ist, nur das Item und Synonyme zurückgeben
       res.status(201).json({ item: newItem, synonyms: createdSynonyms });
     }
   } catch (err) {
@@ -131,6 +119,7 @@ app.post("/Item/create", async (req, res) => {
     res.status(500).send("Fehler beim Erstellen des Items");
   }
 });
+
 
 
 /*app.post("/Item/create", async (req, res) => {
@@ -433,7 +422,7 @@ app.get("/User/getAllUsers", async (req, res) => {
 //Puts
 
 
-app.put("/Item/update/:id", async (req, res) => {
+/*app.put("/Item/update/:id", async (req, res) => {
   const { id } = req.params;
   const { name, description, group, synonyms } = req.body;
 
@@ -487,6 +476,71 @@ app.put("/Item/update/:id", async (req, res) => {
     res.status(500).send("Fehler beim Aktualisieren des Items");
   }
 });
+*/
+
+app.put("/Item/update/:id", async (req, res) => {
+  const { id } = req.params;
+  const { name, description, group, synonyms } = req.body;
+
+  try {
+    // Suchen des Items über seine ID
+    const itemToUpdate = await itemModel.findByPk(id);
+
+    // Überprüfen, ob das Item existiert
+    if (!itemToUpdate) {
+      return res.status(404).send("Item nicht gefunden");
+    }
+
+    // Aktualisieren des Items
+    const updatedItem = await itemToUpdate.update({ name, description });
+
+    // Verarbeiten der Synonyme, falls vorhanden
+    let updatedSynonyms = [];
+    if (Array.isArray(synonyms)) {
+      // Löschen alter Synonyme (optional, abhängig von Geschäftslogik)
+      await synonymsModel.destroy({ where: { i_id: id } });
+
+      for (const synonym of synonyms) {
+        // Erstellen eines Objekts für Synonym-Daten
+        let synonymData = {
+          name: synonym.name,
+          software: synonym.software,
+          i_id: id
+        };
+
+        // Hinzufügen der args-Werte als args1 bis args15
+        synonym.arg.forEach((value, index) => {
+          synonymData[`args${index + 1}`] = value;
+        });
+
+        const updatedSynonym = await synonymsModel.create(synonymData);
+        updatedSynonyms.push(updatedSynonym);
+      }
+    }
+
+    // Aktualisieren der Gruppenzugehörigkeit, falls vorhanden
+    if (group) {
+      const [updatedGroupItem, created] = await groupItemModel.findOrCreate({
+        where: { i_id: id },
+        defaults: { i_id: id, g_id: group }
+      });
+
+      if (!created) {
+        await updatedGroupItem.update({ g_id: group });
+      }
+
+      res.status(200).json({ item: updatedItem, groupItem: updatedGroupItem, synonyms: updatedSynonyms });
+    } else {
+      res.status(200).json({ item: updatedItem, synonyms: updatedSynonyms });
+    }
+
+  } catch (err) {
+    console.log(err);
+    res.status(500).send("Fehler beim Aktualisieren des Items");
+  }
+});
+
+
 
 app.put("/Group/change/:id", async (req, res) => {
   try {
