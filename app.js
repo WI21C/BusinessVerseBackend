@@ -421,63 +421,7 @@ app.get("/User/getAllUsers", async (req, res) => {
 
 //Puts
 
-
-/*app.put("/Item/update/:id", async (req, res) => {
-  const { id } = req.params;
-  const { name, description, group, synonyms } = req.body;
-
-  try {
-    // Suchen des Items über seine ID
-    const itemToUpdate = await itemModel.findByPk(id);
-
-    // Überprüfen, ob das Item existiert
-    if (!itemToUpdate) {
-      return res.status(404).send("Item nicht gefunden");
-    }
-
-    // Aktualisieren des Items
-    const updatedItem = await itemToUpdate.update({ name, description });
-
-    // Verarbeiten der Synonyme, falls vorhanden
-    let updatedSynonyms = [];
-    if (Array.isArray(synonyms)) {
-      // Löschen alter Synonyme (optional, abhängig von Geschäftslogik)
-      await synonymsModel.destroy({ where: { i_id: id } });
-
-      for (const synonym of synonyms) {
-        const updatedSynonym = await synonymsModel.create({
-          ...synonym,
-          i_id: id
-        });
-        updatedSynonyms.push(updatedSynonym);
-      }
-    }
-    // Aktualisieren der Gruppenzugehörigkeit, falls vorhanden
-    if (group) {
-      // Suchen oder Erstellen eines GroupItem
-      const [updatedGroupItem, created] = await groupItemModel.findOrCreate({
-        where: { i_id: id },
-        defaults: { i_id: id, g_id: group }
-      });
-
-      if (!created) {
-        await updatedGroupItem.update({ g_id: group });
-      }
-
-      // Rückgabe aller aktualisierten Objekte
-      res.status(200).json({ item: updatedItem, groupItem: updatedGroupItem, synonyms: updatedSynonyms });
-    } else {
-      // Falls keine groupId vorhanden ist, nur das Item und Synonyme zurückgeben
-      res.status(200).json({ item: updatedItem, synonyms: updatedSynonyms });
-    }
-
-  } catch (err) {
-    console.log(err);
-    res.status(500).send("Fehler beim Aktualisieren des Items");
-  }
-});
-*/
-
+/*
 app.put("/Item/update/:id", async (req, res) => {
   const { id } = req.params;
   const { name, description, group, synonyms } = req.body;
@@ -539,6 +483,77 @@ app.put("/Item/update/:id", async (req, res) => {
     res.status(500).send("Fehler beim Aktualisieren des Items");
   }
 });
+*/
+app.put("/Item/update/:id", async (req, res) => {
+  const { id } = req.params;
+  const { name, description, group, synonyms } = req.body;
+
+  try {
+    // Suchen des Items über seine ID
+    const itemToUpdate = await itemModel.findByPk(id);
+
+    // Überprüfen, ob das Item existiert
+    if (!itemToUpdate) {
+      return res.status(404).send("Item nicht gefunden");
+    }
+
+    // Aktualisieren des Items
+    const updatedItem = await itemToUpdate.update({ name, description });
+
+    // Verarbeiten der Synonyme, falls vorhanden
+    let updatedSynonyms = [];
+    if (Array.isArray(synonyms)) {
+      // Löschen alter Synonyme (optional, abhängig von Geschäftslogik)
+      await synonymsModel.destroy({ where: { i_id: id } });
+
+      for (const synonym of synonyms) {
+        // Erstellen eines Objekts für Synonym-Daten
+        let synonymData = {
+          name: synonym.name,
+          software: synonym.software,
+          i_id: id
+        };
+
+        // Hinzufügen der args-Werte als args1 bis args15
+        synonym.arg.forEach((value, index) => {
+          synonymData[`args${index + 1}`] = value;
+        });
+
+        const createdSynonym = await synonymsModel.create(synonymData);
+
+        // Umformen der Synonym-Daten für die Antwort
+        let synonymResponse = {
+          name: createdSynonym.name,
+          software: createdSynonym.software,
+          arg: synonym.arg
+        };
+        
+        updatedSynonyms.push(synonymResponse);
+      }
+    }
+
+    // Aktualisieren der Gruppenzugehörigkeit, falls vorhanden
+    if (group) {
+      const [updatedGroupItem, created] = await groupItemModel.findOrCreate({
+        where: { i_id: id },
+        defaults: { i_id: id, g_id: group }
+      });
+
+      if (!created) {
+        await updatedGroupItem.update({ g_id: group });
+      }
+
+      res.status(200).json({ item: updatedItem, groupItem: updatedGroupItem, synonyms: updatedSynonyms });
+    } else {
+      res.status(200).json({ item: updatedItem, synonyms: updatedSynonyms });
+    }
+
+  } catch (err) {
+    console.log(err);
+    res.status(500).send("Fehler beim Aktualisieren des Items");
+  }
+});
+
 
 
 
