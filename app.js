@@ -73,7 +73,7 @@ app.post("/Item/create", async (req, res) => {
     const newItem = await itemModel.create({ name, description });
 
     // Verarbeiten der Synonyme, falls vorhanden
-    let createdSynonyms = [];
+    /*let createdSynonyms = [];
     if (Array.isArray(synonyms)) {
       for (const synonym of synonyms) {
         const createdSynonym = await synonymsModel.create({
@@ -83,6 +83,34 @@ app.post("/Item/create", async (req, res) => {
         createdSynonyms.push(createdSynonym);
       }
     }
+    */
+
+    let createdSynonyms = [];
+    if (Array.isArray(synonyms)) {
+      for (const synonym of synonyms) {
+        // Erstelle ein Objekt für das synonym-Modell
+        let synonymModelObject = {
+          name: synonym.name,
+          i_id: newItem.id, // Annahme, dass itemId das Feld ist, das das Item referenziert
+          software: synonym.software
+        };
+    
+        // Füge args-Felder aus dem arg-Array hinzu
+        if (Array.isArray(synonym.arg)) {
+          synonym.arg.forEach((argValue, index) => {
+            if (index < 15) { // Stelle sicher, dass nicht mehr als 15 args hinzugefügt werden
+              synonymModelObject[`args${index + 1}`] = argValue;
+            }
+          });
+        }
+    
+        // Erstelle das Synonym im Modell
+        const createdSynonym = await synonymsModel.create(synonymModelObject);
+        createdSynonyms.push(createdSynonym);
+      }
+    }
+    
+
 
     // Überprüfen, ob eine groupId bereitgestellt wurde
     if (group) {
@@ -93,7 +121,7 @@ app.post("/Item/create", async (req, res) => {
       });
 
       // Rückgabe aller erstellten Objekte
-      res.status(201).json({ item: newItem, groupItem: newGroupItem, synonyms: createdSynonyms });
+      res.status(201).json({ item: newItem, synonyms: createdSynonyms });
     } else {
       // Falls keine groupId vorhanden ist, nur das Item und Synonyme zurückgeben
       res.status(201).json({ item: newItem, synonyms: createdSynonyms });
@@ -307,7 +335,7 @@ app.get("/Item/getAllItems", async (req, res) => {
   }
 });
 
-app.get("/Item/getAll", async (req, res) => {
+/*app.get("/Item/getAll", async (req, res) => {
   try {
     const allItems = await itemModel.findAll();
     // Asynchron alle zugehörigen Items für jede Gruppe abrufen
@@ -327,6 +355,47 @@ app.get("/Item/getAll", async (req, res) => {
     res.status(500).send("Probleme bei dem Abrufen");
   }
 });
+*/
+app.get("/Item/getAll", async (req, res) => {
+  try {
+    const allItems = await itemModel.findAll();
+    const itemAndSyns = await Promise.all(allItems.map(async item => {
+      const synonyms = await synonymsModel.findAll({
+        where: { i_id: item.id }
+      });
+
+      const transformedSynonyms = await synonyms.map(synonym => {
+        const synonymData = synonym.toJSON(); 
+        let argsArray = [];
+
+        for (let i = 1; i <= 15; i++) {
+          let argKey = `args${i}`;
+          if (synonymData[argKey]) {
+            argsArray.push(synonymData[argKey]);
+          }
+        }
+
+        return {
+          ...synonymData,
+          args: argsArray
+        };
+      });
+
+      return {
+        ...item.toJSON(), 
+        synonyms: transformedSynonyms
+      };
+    }));
+    res.json(itemAndSyns);
+  } catch (err) {
+    console.log(err);
+    res.status(500).send("Probleme bei dem Abrufen");
+  }
+});
+
+
+
+
 
 app.get("/Synonym/getAll", async (req, res) => {
   try {
