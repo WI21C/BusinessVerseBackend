@@ -386,7 +386,7 @@ app.put("/Item/update/:id", async (req, res) => {
       for (const synonym of synonyms) {
         const updatedSynonym = await synonymsModel.create({
           ...synonym,
-          itemId: id
+          i_id: id
         });
         updatedSynonyms.push(updatedSynonym);
       }
