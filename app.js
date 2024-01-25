@@ -515,7 +515,7 @@ app.put("/Item/update/:id", async (req, res) => {
         };
 
         // Hinzufügen der args-Werte als args1 bis args15
-        synonym.arg.forEach((value, index) => {
+        synonym.args.forEach((value, index) => {
           synonymData[`args${index + 1}`] = value;
         });
 
@@ -525,7 +525,7 @@ app.put("/Item/update/:id", async (req, res) => {
         let synonymResponse = {
           name: createdSynonym.name,
           software: createdSynonym.software,
-          arg: synonym.arg
+          args: synonym.args
         };
         
         updatedSynonyms.push(synonymResponse);
