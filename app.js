@@ -885,6 +885,8 @@ app.post("/User/checkLogin", async (req, res) => {
 
     // Vergleiche das eingegebene Passwort mit dem in der Datenbank gespeicherten Passwort
     const isValidPassword = await bcrypt.compare(password, user.password);
+    user.role = user.role.split(';');
+    
     if (isValidPassword) {
       return res.json({ user, success: true });
     } else {
