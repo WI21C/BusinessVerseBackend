@@ -1,5 +1,5 @@
 const { Sequelize, DataTypes } = require("sequelize");
-const { v4: uuidv4 } = require('uuidv4');
+const { v4: uuidv4 } = require('uuid');
 
 
 class Item {
