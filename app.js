@@ -186,8 +186,8 @@ app.post("/GroupItem/create", async (req, res) => {
 });
 
 app.post("/User/create", async (req, res) => {
-  const { id, name, email, password, role } = req.body;
-  const userRoleArray = await req.body.role;
+  const { id, name, email, password, roles } = req.body;
+  const userRolesArray = await req.body.roles;
 
 
   try {
@@ -198,10 +198,10 @@ app.post("/User/create", async (req, res) => {
       return res.status(400).json({ error: 'Email already exists in the database' });
     }
 
-    const userRoleString = userRoleArray.join(";");
+    const userRolesString = userRolesArray.join(";");
     // falls die email noch frei ist erstelle neuen user
     const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = await userModel.create({ id, name, email, password: hashedPassword, role: userRoleString });
+    const newUser = await userModel.create({ id, name, email, password: hashedPassword, roles: userRoleString });
     res.status(201).json(newUser);
   } catch (err) {
     console.log(err);
@@ -707,7 +707,7 @@ app.get("/User/getUser/:id", async (req, res) => {
       return res.status(404).send('User not found')
     }
 
-    user.role = user.role.split(';');
+    user.roles = user.roles.split(';');
 
     res.json(user); 
   } catch (err) {
@@ -885,8 +885,8 @@ app.post("/User/checkLogin", async (req, res) => {
 
     // Vergleiche das eingegebene Passwort mit dem in der Datenbank gespeicherten Passwort
     const isValidPassword = await bcrypt.compare(password, user.password);
-    user.role = user.role.split(';');
-    
+    user.roles = user.roles.split(';');
+
     if (isValidPassword) {
       return res.json({ user, success: true });
     } else {
