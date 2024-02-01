@@ -186,7 +186,8 @@ app.post("/GroupItem/create", async (req, res) => {
 });
 
 app.post("/User/create", async (req, res) => {
-  const { id, name, email, password } = req.body;
+  const { id, name, email, password, role } = req.body;
+  const userRoleArray = await req.body(role);
   try {
     // Checken, ob es die email schon gibt
     const existingUser = await userModel.findOne({ where: { email: email } });
@@ -195,9 +196,10 @@ app.post("/User/create", async (req, res) => {
       return res.status(400).json({ error: 'Email already exists in the database' });
     }
 
+    const userRoleString = userRoleArray.split(";");
     // falls die email noch frei ist erstelle neuen user
     const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = await userModel.create({ id, name, email, password: hashedPassword });
+    const newUser = await userModel.create({ id, name, email, password: hashedPassword, role: userRoleString });
     res.status(201).json(newUser);
   } catch (err) {
     console.log(err);

@@ -23,7 +23,11 @@ class User {
         password: {
           type: DataTypes.STRING(100),
           allowNull: false
-        }
+        },
+        role: {
+          type: DataTypes.STRING(255),
+          allowNull: false
+        },
       },
       {
         timestamps: false // Deaktiviere die automatischen Zeitstempel  Für Doku: schlechte Abspache mit db-Team: sequelize erstellt automatisch einen timestamp außer man deaktiviert in explizit. 
