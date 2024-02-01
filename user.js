@@ -26,7 +26,7 @@ class User {
         },
         role: {
           type: DataTypes.STRING(255),
-          allowNull: false
+          allowNull: true
         },
       },
       {
