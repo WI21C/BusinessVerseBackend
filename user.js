@@ -24,7 +24,7 @@ class User {
           type: DataTypes.STRING(100),
           allowNull: false
         },
-        role: {
+        roles: {
           type: DataTypes.STRING(255),
           allowNull: true
         },
