@@ -281,43 +281,6 @@ app.get("/Group/getAllItems", async (req, res) => {
 */
 
 
-app.get("/Item/get/:id", async (req, res) => {
-  try {
-    const id=req.params.id;
-    const item = await itemModel.findByPk(id);
-    // Asynchron alle zugehörigen Items für jede Gruppe abrufen
-    /*
-    const itemsAndSyns = await Promise.all(allGroups.map(async group => {
-      const items = await groupItemModel.findAll({
-        where: { g_id: group.id },
-        attributes: ['i_id'] // Annahme, dass die Spalte im itemModel 'g_id' heißt
-      });
-      const itemIds = items.map(item => parseInt(item.i_id))
-      return {
-        ...group.toJSON(), // oder group.dataValues, abhängig von Ihrem ORM
-        items: itemIds // Fügt die zugehörigen Items zu jeder Gruppe hinzu
-      };
-    }));
-
-    */
-
-    const combined= await item.map(async item => {
-      const synonyms = await synonymsModel.findAll({
-      where: {i_id: item.id}
-    });
-    return {
-      ...item.toJSON(),
-      item: synonyms
-    };
-    })
-    res.json(combined);
-  } catch (err) {
-    console.log(err);
-    res.status(500).send("Probleme bei dem Abrufen");
-  }
-});
-
-
 
 app.get("/Item/getAllItems", async (req, res) => {
   try {
@@ -488,7 +451,7 @@ app.put("/Item/update/:id", async (req, res) => {
   }
 });
 */
-app.put("/Item/update/:id", async (req, res) => {
+app.put("/Item/change/:id", async (req, res) => {
   const { id } = req.params;
   const { name, description, group, synonyms } = req.body;
 
@@ -578,23 +541,6 @@ app.put("/Group/change/:id", async (req, res) => {
   }
 });
 
-app.put("/Item/change/:id", async (req, res) => {
-  try {
-    const id=req.params.id;
-    const aktualiserteDaten = req.body;
-
-    const changeItemId = await itemModel.findByPk(id);
-    if (!changeItemId){
-      return res.status(404).send('Eintrag nicht gefunden')
-    }
-    await changeItemId.update(aktualiserteDaten)
-    res.send(changeItemId)
-  } catch (err) {
-    console.log(err);
-    res.status(500).send("Fehler beim Ändern des Items");
-  }
-});
-
 app.put("/Synonym/change/:id", async (req, res) => {
   try {
     const id=req.params.id;
@@ -659,14 +605,21 @@ app.put("/User/changeUser/:id", async (req, res) => {
 app.get("/Item/getById/:id", async (req, res) => {
   try {
     const id=req.params.id;
-
-    const idItem = await itemModel.findByPk(id);
-    if (!idItem){
-      return res.status(404).send('Eintrag nicht gefunden')
-    }
-    res.json(idItem); 
+    const item = await itemModel.findByPk(id);
+    
+    const combined= await item.map(async item => {
+      const synonyms = await synonymsModel.findAll({
+      where: {i_id: item.id}
+    });
+    return {
+      ...item.toJSON(),
+      item: synonyms
+    };
+    })
+    res.json(combined);
   } catch (err) {
     console.log(err);
+    res.status(500).send("Probleme bei dem Abrufen");
   }
 });
 
