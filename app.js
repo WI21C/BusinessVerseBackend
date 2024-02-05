@@ -201,7 +201,7 @@ app.post("/User/create", async (req, res) => {
     const userRolesString = userRolesArray.join(";");
     // falls die email noch frei ist erstelle neuen user
     const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = await userModel.create({ id, name, email, password: hashedPassword, roles: userRoleString });
+    const newUser = await userModel.create({ id, name, email, password: hashedPassword, roles: userRolesString });
     res.status(201).json(newUser);
   } catch (err) {
     console.log(err);
