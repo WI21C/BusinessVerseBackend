@@ -54,11 +54,13 @@ sequelize
 //Posts
 
 
+//erstellung eines Items
 app.post("/Item/create", async (req, res) => {
   const { name, description, group, synonyms } = req.body;
   try {
     const newItem = await itemModel.create({ name, description });
 
+    //erstellen der Synonyme
     let createdSynonyms = [];
     if (Array.isArray(synonyms)) {
       for (const synonym of synonyms) {
@@ -68,6 +70,7 @@ app.post("/Item/create", async (req, res) => {
           software: synonym.software
         };
 
+        //args aus Array entpacken
         let argsArray = [];
         if (Array.isArray(synonym.arg)) {
           synonym.arg.forEach((argValue, index) => {
@@ -92,6 +95,7 @@ app.post("/Item/create", async (req, res) => {
       }
     }
 
+    //Verknüpfung zu Gruppe erstellen
     if (group) {
       const newGroupItem = await groupItemModel.create({
         i_id: newItem.id,
@@ -108,7 +112,7 @@ app.post("/Item/create", async (req, res) => {
   }
 });
 
-
+//erstellen von Gruppe
 app.post("/Group/create", async (req, res) => {
   const { name, description, items} = req.body;
   try {
@@ -120,6 +124,7 @@ app.post("/Group/create", async (req, res) => {
   }
 });
 
+//erstellen von Synonymen
 app.post("/Synonym/create", async (req, res) => {
   const { name, i_id, software} = req.body;
   try {
@@ -131,6 +136,7 @@ app.post("/Synonym/create", async (req, res) => {
   }
 });
 
+//erstellen von GroupItem
 app.post("/GroupItem/create", async (req, res) => {
   const { i_id, g_id } = req.body;
   try {
@@ -142,6 +148,7 @@ app.post("/GroupItem/create", async (req, res) => {
   }
 });
 
+//erstellen von User
 app.post("/User/create", async (req, res) => {
   const { id, name, email, password, roles } = req.body;
   const userRolesArray = await req.body.roles;
@@ -168,6 +175,8 @@ app.post("/User/create", async (req, res) => {
 
 //Get All
 
+
+//alle Gruppen zurückgeben
 app.get("/Group/getAll", async (req, res) => {
   try {
     const allGroups = await groupModel.findAll();
@@ -177,6 +186,7 @@ app.get("/Group/getAll", async (req, res) => {
   }
 });
 
+//Alle gruppen mit ihren Items zurückgeben
 app.get("/Group/getAllItems", async (req, res) => {
   try {
     const allGroups = await groupModel.findAll();
@@ -205,40 +215,7 @@ app.get("/Group/getAllItems", async (req, res) => {
 });
 
 
-
-/*app.get("/Group/getAllItems", async (req, res) => {
-  try {
-    const allGroups = await groupModel.findAll();
-    // Asynchron alle zugehörigen Items für jede Gruppe abrufen
-    const groupAndItems = await Promise.all(allGroups.map(async group => {
-      const [items] = await groupItemModel.findAll({
-        where: { g_id: group.id },
-        attributes: ['i_id'] // Annahme, dass die Spalte im itemModel 'g_id' heißt
-      });
-
-      let itemIds = [];
-      if (items.length !== 0) {
-        itemIds = items.map(item => item.i_id);
-      }
-
-      if (items.length !== 0){
-        const itemIds = items.map(item => item.i_id )
-      }
-      return {
-        ...group.toJSON(), // oder group.dataValues, abhängig von Ihrem ORM
-        items: itemIds // Fügt die zugehörigen Items zu jeder Gruppe hinzu
-      };
-    }));
-    res.json(groupAndItems);
-  } catch (err) {
-    console.log(err);
-    res.status(500).send("Probleme bei dem Abrufen");
-  }
-});
-*/
-
-
-
+//Alle Items werden ausgegeben
 app.get("/Item/getAllItems", async (req, res) => {
   try {
     const allItems = await itemModel.findAll();
@@ -248,14 +225,17 @@ app.get("/Item/getAllItems", async (req, res) => {
   }
 });
 
+// alle Items werden mit synonymen ausgegeben und args als array
 app.get("/Item/getAll", async (req, res) => {
   try {
+    //alle Items und verknüpfte Synonyme finden
     const allItems = await itemModel.findAll();
     const itemAndSyns = await Promise.all(allItems.map(async item => {
       const synonyms = await synonymsModel.findAll({
         where: { i_id: item.id }
       });
 
+      //args in array verpacken
       const transformedSynonyms = synonyms.map(synonym => {
         const synonymData = synonym.toJSON();
         let argsArray = [];
@@ -288,10 +268,7 @@ app.get("/Item/getAll", async (req, res) => {
 });
 
 
-
-
-
-
+// alle Synonyme ausgeben
 app.get("/Synonym/getAll", async (req, res) => {
   try {
     const allSynonyms = await synonymsModel.findAll();
@@ -301,6 +278,7 @@ app.get("/Synonym/getAll", async (req, res) => {
   }
 });
 
+// alle GroupItems ausgeben
 app.get("/GroupItem/getAll", async (req, res) => {
   try {
     const allGroupItems = await groupItemModel.findAll();
@@ -310,6 +288,7 @@ app.get("/GroupItem/getAll", async (req, res) => {
   }
 });
 
+// alle User ausgeben
 app.get("/User/getAllUsers", async (req, res) => {
   try {
     const allUsers = await userModel.findAll();
@@ -324,69 +303,8 @@ app.get("/User/getAllUsers", async (req, res) => {
 
 //Puts
 
-/*
-app.put("/Item/update/:id", async (req, res) => {
-  const { id } = req.params;
-  const { name, description, group, synonyms } = req.body;
 
-  try {
-    // Suchen des Items über seine ID
-    const itemToUpdate = await itemModel.findByPk(id);
-
-    // Überprüfen, ob das Item existiert
-    if (!itemToUpdate) {
-      return res.status(404).send("Item nicht gefunden");
-    }
-
-    // Aktualisieren des Items
-    const updatedItem = await itemToUpdate.update({ name, description });
-
-    // Verarbeiten der Synonyme, falls vorhanden
-    let updatedSynonyms = [];
-    if (Array.isArray(synonyms)) {
-      // Löschen alter Synonyme (optional, abhängig von Geschäftslogik)
-      await synonymsModel.destroy({ where: { i_id: id } });
-
-      for (const synonym of synonyms) {
-        // Erstellen eines Objekts für Synonym-Daten
-        let synonymData = {
-          name: synonym.name,
-          software: synonym.software,
-          i_id: id
-        };
-
-        // Hinzufügen der args-Werte als args1 bis args15
-        synonym.arg.forEach((value, index) => {
-          synonymData[`args${index + 1}`] = value;
-        });
-
-        const updatedSynonym = await synonymsModel.create(synonymData);
-        updatedSynonyms.push(updatedSynonym);
-      }
-    }
-
-    // Aktualisieren der Gruppenzugehörigkeit, falls vorhanden
-    if (group) {
-      const [updatedGroupItem, created] = await groupItemModel.findOrCreate({
-        where: { i_id: id },
-        defaults: { i_id: id, g_id: group }
-      });
-
-      if (!created) {
-        await updatedGroupItem.update({ g_id: group });
-      }
-
-      res.status(200).json({ item: updatedItem, groupItem: updatedGroupItem, synonyms: updatedSynonyms });
-    } else {
-      res.status(200).json({ item: updatedItem, synonyms: updatedSynonyms });
-    }
-
-  } catch (err) {
-    console.log(err);
-    res.status(500).send("Fehler beim Aktualisieren des Items");
-  }
-});
-*/
+// bestehendes Item anpassen
 app.put("/Item/change/:id", async (req, res) => {
   const { id } = req.params;
   const { name, description, group, synonyms } = req.body;
@@ -459,16 +377,18 @@ app.put("/Item/change/:id", async (req, res) => {
 
 
 
-
+// bestehende Gruppe ändern
 app.put("/Group/change/:id", async (req, res) => {
   try {
     const id=req.params.id;
     const aktualiserteDaten = req.body;
 
+    //Gruppe finden
     const changeGroupId = await groupModel.findByPk(id);
     if (!changeGroupId){
       return res.status(404).send('Eintrag nicht gefunden')
     }
+    //Gruppe anpassen
     await changeGroupId.update(aktualiserteDaten)
     res.send(changeGroupId)
   } catch (err) {
@@ -477,15 +397,18 @@ app.put("/Group/change/:id", async (req, res) => {
   }
 });
 
+// bereits bestehendes Synonym anpassen
 app.put("/Synonym/change/:id", async (req, res) => {
   try {
     const id=req.params.id;
     const aktualiserteDaten = req.body;
 
+    //Synonym finden
     const changeSynonymId = await synonymsModel.findByPk(id);
     if (!changeSynonymId){
       return res.status(404).send('Eintrag nicht gefunden')
     }
+    //Synonym anpassen
     await changeSynonymId.update(aktualiserteDaten)
     res.send(changeSynonymId)
   } catch (err) {
@@ -494,15 +417,18 @@ app.put("/Synonym/change/:id", async (req, res) => {
   }
 });
 
+//bestehendes GroupItem anpassen
 app.put("/GroupItem/change/:id", async (req, res) => {
   try {
     const id=req.params.id;
     const aktualiserteDaten = req.body;
 
+    //GroupItem finden
     const changeGroupItemId = await groupItemModel.findByPk(id);
     if (!changeGroupItemId){
       return res.status(404).send('Eintrag nicht gefunden')
     }
+    //GroupItem anpassen
     await changeGroupItemId.update(aktualiserteDaten)
     res.send(changeGroupItemId)
   } catch (err) {
@@ -538,11 +464,14 @@ app.put("/User/changeUser/:id", async (req, res) => {
 
 //get by id
 
+//ein Item durch die Item Id abfragen
 app.get("/Item/getById/:id", async (req, res) => {
   try {
     const id=req.params.id;
+    // Item finden
     const item = await itemModel.findByPk(id);
     
+    //synonyme finden passend zu Item
     const combined= await item.map(async item => {
       const synonyms = await synonymsModel.findAll({
       where: {i_id: item.id}
@@ -559,6 +488,7 @@ app.get("/Item/getById/:id", async (req, res) => {
   }
 });
 
+// Gruppe mit Group ID finden und ausgeben
 app.get("/Group/getById/:id", async (req, res) => {
   try {
     const id=req.params.id;
@@ -573,6 +503,7 @@ app.get("/Group/getById/:id", async (req, res) => {
   }
 });
 
+//Synonym durch Synonym ID finden und ausgeben
 app.get("/Synonym/getById/:id", async (req, res) => {
   try {
     const id=req.params.id;
