@@ -53,18 +53,6 @@ sequelize
 
 //Posts
 
-/*app.post("/Item/create", async (req, res) => {
-  const { name, description } = req.body;
-  try {
-    const newItem = await itemModel.create({ name, description });
-    res.status(201).json(newItem);
-  } catch (err) {
-    console.log(err);
-    res.status(500).send("Fehler beim Erstellen des Items");
-  }
-});
-*/
-
 
 app.post("/Item/create", async (req, res) => {
   const { name, description, group, synonyms } = req.body;
@@ -119,37 +107,6 @@ app.post("/Item/create", async (req, res) => {
     res.status(500).send("Fehler beim Erstellen des Items");
   }
 });
-
-
-
-/*app.post("/Item/create", async (req, res) => {
-  const { name, description, group, synonyms } = req.body;
-  try {
-    // Erstellen eines neuen Items
-    const newItem = await itemModel.create({ name, description });
-
-    // Überprüfen, ob eine groupId bereitgestellt wurde
-    if (group) {
-      // Erstellen eines neuen GroupItem
-      const newGroupItem = await groupItemModel.create({
-        i_id: newItem.id,  // Annahme, dass _id die ID des Items ist
-        g_id: group
-      });
-
-      // Rückgabe beider erstellter Objekte
-      res.status(201).json({ item: newItem, groupItem: newGroupItem });
-    } else {
-      // Falls keine groupId vorhanden ist, nur das Item zurückgeben
-      res.status(201).json(newItem);
-    }
-  } catch (err) {
-    console.log(err);
-    res.status(500).send("Fehler beim Erstellen des Items");
-  }
-});
-*/
-
-
 
 
 app.post("/Group/create", async (req, res) => {
@@ -245,57 +202,11 @@ app.get("/Group/getAllItems", async (req, res) => {
 
 
 
-/*app.get("/Group/getAllItems", async (req, res) => {
-  try {
-    const allGroups = await groupModel.findAll();
-    // Asynchron alle zugehörigen Items für jede Gruppe abrufen
-    const groupAndItems = await Promise.all(allGroups.map(async group => {
-      const [items] = await groupItemModel.findAll({
-        where: { g_id: group.id },
-        attributes: ['i_id'] // Annahme, dass die Spalte im itemModel 'g_id' heißt
-      });
-
-      let itemIds = [];
-      if (items.length !== 0) {
-        itemIds = items.map(item => item.i_id);
-      }
-
-      if (items.length !== 0){
-        const itemIds = items.map(item => item.i_id )
-      }
-      return {
-        ...group.toJSON(), // oder group.dataValues, abhängig von Ihrem ORM
-        items: itemIds // Fügt die zugehörigen Items zu jeder Gruppe hinzu
-      };
-    }));
-    res.json(groupAndItems);
-  } catch (err) {
-    console.log(err);
-    res.status(500).send("Probleme bei dem Abrufen");
-  }
-});
-*/
-
 
 app.get("/Item/get/:id", async (req, res) => {
   try {
     const id=req.params.id;
     const item = await itemModel.findByPk(id);
-    // Asynchron alle zugehörigen Items für jede Gruppe abrufen
-    /*
-    const itemsAndSyns = await Promise.all(allGroups.map(async group => {
-      const items = await groupItemModel.findAll({
-        where: { g_id: group.id },
-        attributes: ['i_id'] // Annahme, dass die Spalte im itemModel 'g_id' heißt
-      });
-      const itemIds = items.map(item => parseInt(item.i_id))
-      return {
-        ...group.toJSON(), // oder group.dataValues, abhängig von Ihrem ORM
-        items: itemIds // Fügt die zugehörigen Items zu jeder Gruppe hinzu
-      };
-    }));
-
-    */
 
     const combined= await item.map(async item => {
       const synonyms = await synonymsModel.findAll({
@@ -324,27 +235,6 @@ app.get("/Item/getAllItems", async (req, res) => {
   }
 });
 
-/*app.get("/Item/getAll", async (req, res) => {
-  try {
-    const allItems = await itemModel.findAll();
-    // Asynchron alle zugehörigen Items für jede Gruppe abrufen
-    const itemAndSyns = await Promise.all(allItems.map(async item => {
-      const synonyms = await synonymsModel.findAll({
-        where: { i_id: item.id }
-        //attributes: ['i_id'] // Annahme, dass die Spalte im itemModel 'g_id' heißt
-      });
-      return {
-        ...item.toJSON(), // oder group.dataValues, abhängig von Ihrem ORM
-        synonyms: synonyms // Fügt die zugehörigen Items zu jeder Gruppe hinzu
-      };
-    }));
-    res.json(itemAndSyns);
-  } catch (err) {
-    console.log(err);
-    res.status(500).send("Probleme bei dem Abrufen");
-  }
-});
-*/
 app.get("/Item/getAll", async (req, res) => {
   try {
     const allItems = await itemModel.findAll();
@@ -421,69 +311,6 @@ app.get("/User/getAllUsers", async (req, res) => {
 
 //Puts
 
-/*
-app.put("/Item/update/:id", async (req, res) => {
-  const { id } = req.params;
-  const { name, description, group, synonyms } = req.body;
-
-  try {
-    // Suchen des Items über seine ID
-    const itemToUpdate = await itemModel.findByPk(id);
-
-    // Überprüfen, ob das Item existiert
-    if (!itemToUpdate) {
-      return res.status(404).send("Item nicht gefunden");
-    }
-
-    // Aktualisieren des Items
-    const updatedItem = await itemToUpdate.update({ name, description });
-
-    // Verarbeiten der Synonyme, falls vorhanden
-    let updatedSynonyms = [];
-    if (Array.isArray(synonyms)) {
-      // Löschen alter Synonyme (optional, abhängig von Geschäftslogik)
-      await synonymsModel.destroy({ where: { i_id: id } });
-
-      for (const synonym of synonyms) {
-        // Erstellen eines Objekts für Synonym-Daten
-        let synonymData = {
-          name: synonym.name,
-          software: synonym.software,
-          i_id: id
-        };
-
-        // Hinzufügen der args-Werte als args1 bis args15
-        synonym.arg.forEach((value, index) => {
-          synonymData[`args${index + 1}`] = value;
-        });
-
-        const updatedSynonym = await synonymsModel.create(synonymData);
-        updatedSynonyms.push(updatedSynonym);
-      }
-    }
-
-    // Aktualisieren der Gruppenzugehörigkeit, falls vorhanden
-    if (group) {
-      const [updatedGroupItem, created] = await groupItemModel.findOrCreate({
-        where: { i_id: id },
-        defaults: { i_id: id, g_id: group }
-      });
-
-      if (!created) {
-        await updatedGroupItem.update({ g_id: group });
-      }
-
-      res.status(200).json({ item: updatedItem, groupItem: updatedGroupItem, synonyms: updatedSynonyms });
-    } else {
-      res.status(200).json({ item: updatedItem, synonyms: updatedSynonyms });
-    }
-
-  } catch (err) {
-    console.log(err);
-    res.status(500).send("Fehler beim Aktualisieren des Items");
-  }
-});
-*/
 app.put("/Item/update/:id", async (req, res) => {
   const { id } = req.params;
   const { name, description, group, synonyms } = req.body;
@@ -735,6 +562,7 @@ app.delete("/Group/deleteById/:id", async (req, res) => {
   }
 });
 
+
 app.delete("/Item/deleteById/:id", async (req, res) => {
   try {
     const id = req.params.id;
@@ -757,6 +585,7 @@ app.delete("/Item/deleteById/:id", async (req, res) => {
   }
 });
 
+//löschen eines Items
 app.delete("/Item/delete/:id", async (req, res) => {
   const { id } = req.params;
 
@@ -842,13 +671,13 @@ app.delete("/User/deleteUser/:id", async (req, res) => {
   try {
     const userId = req.params.id;
 
-    // Check if the user exists
+    // Ünerprüfen ob User existiert
     const userToDelete = await userModel.findByPk(userId);
     if (!userToDelete) {
       return res.status(404).send('User not found');
     }
 
-    // Delete the user
+    // User löschen
     await userModel.destroy({
       where: { u_id: userId }
     });
