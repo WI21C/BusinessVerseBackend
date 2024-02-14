@@ -143,7 +143,10 @@ app.post("/GroupItem/create", async (req, res) => {
 });
 
 app.post("/User/create", async (req, res) => {
-  const { id, name, email, password } = req.body;
+  const { id, name, email, password, roles } = req.body;
+  const userRolesArray = await req.body.roles;
+
+
   try {
     // Checken, ob es die email schon gibt
     const existingUser = await userModel.findOne({ where: { email: email } });
@@ -152,9 +155,10 @@ app.post("/User/create", async (req, res) => {
       return res.status(400).json({ error: 'Email already exists in the database' });
     }
 
+    const userRolesString = userRolesArray.join(";");
     // falls die email noch frei ist erstelle neuen user
     const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = await userModel.create({ id, name, email, password: hashedPassword });
+    const newUser = await userModel.create({ id, name, email, password: hashedPassword, roles: userRolesString });
     res.status(201).json(newUser);
   } catch (err) {
     console.log(err);
@@ -202,27 +206,36 @@ app.get("/Group/getAllItems", async (req, res) => {
 
 
 
-
-app.get("/Item/get/:id", async (req, res) => {
+/*app.get("/Group/getAllItems", async (req, res) => {
   try {
-    const id=req.params.id;
-    const item = await itemModel.findByPk(id);
+    const allGroups = await groupModel.findAll();
+    // Asynchron alle zugehörigen Items für jede Gruppe abrufen
+    const groupAndItems = await Promise.all(allGroups.map(async group => {
+      const [items] = await groupItemModel.findAll({
+        where: { g_id: group.id },
+        attributes: ['i_id'] // Annahme, dass die Spalte im itemModel 'g_id' heißt
+      });
 
-    const combined= await item.map(async item => {
-      const synonyms = await synonymsModel.findAll({
-      where: {i_id: item.id}
-    });
-    return {
-      ...item.toJSON(),
-      item: synonyms
-    };
-    })
-    res.json(combined);
+      let itemIds = [];
+      if (items.length !== 0) {
+        itemIds = items.map(item => item.i_id);
+      }
+
+      if (items.length !== 0){
+        const itemIds = items.map(item => item.i_id )
+      }
+      return {
+        ...group.toJSON(), // oder group.dataValues, abhängig von Ihrem ORM
+        items: itemIds // Fügt die zugehörigen Items zu jeder Gruppe hinzu
+      };
+    }));
+    res.json(groupAndItems);
   } catch (err) {
     console.log(err);
     res.status(500).send("Probleme bei dem Abrufen");
   }
 });
+*/
 
 
 
@@ -311,7 +324,70 @@ app.get("/User/getAllUsers", async (req, res) => {
 
 //Puts
 
+/*
 app.put("/Item/update/:id", async (req, res) => {
+  const { id } = req.params;
+  const { name, description, group, synonyms } = req.body;
+
+  try {
+    // Suchen des Items über seine ID
+    const itemToUpdate = await itemModel.findByPk(id);
+
+    // Überprüfen, ob das Item existiert
+    if (!itemToUpdate) {
+      return res.status(404).send("Item nicht gefunden");
+    }
+
+    // Aktualisieren des Items
+    const updatedItem = await itemToUpdate.update({ name, description });
+
+    // Verarbeiten der Synonyme, falls vorhanden
+    let updatedSynonyms = [];
+    if (Array.isArray(synonyms)) {
+      // Löschen alter Synonyme (optional, abhängig von Geschäftslogik)
+      await synonymsModel.destroy({ where: { i_id: id } });
+
+      for (const synonym of synonyms) {
+        // Erstellen eines Objekts für Synonym-Daten
+        let synonymData = {
+          name: synonym.name,
+          software: synonym.software,
+          i_id: id
+        };
+
+        // Hinzufügen der args-Werte als args1 bis args15
+        synonym.arg.forEach((value, index) => {
+          synonymData[`args${index + 1}`] = value;
+        });
+
+        const updatedSynonym = await synonymsModel.create(synonymData);
+        updatedSynonyms.push(updatedSynonym);
+      }
+    }
+
+    // Aktualisieren der Gruppenzugehörigkeit, falls vorhanden
+    if (group) {
+      const [updatedGroupItem, created] = await groupItemModel.findOrCreate({
+        where: { i_id: id },
+        defaults: { i_id: id, g_id: group }
+      });
+
+      if (!created) {
+        await updatedGroupItem.update({ g_id: group });
+      }
+
+      res.status(200).json({ item: updatedItem, groupItem: updatedGroupItem, synonyms: updatedSynonyms });
+    } else {
+      res.status(200).json({ item: updatedItem, synonyms: updatedSynonyms });
+    }
+
+  } catch (err) {
+    console.log(err);
+    res.status(500).send("Fehler beim Aktualisieren des Items");
+  }
+});
+*/
+app.put("/Item/change/:id", async (req, res) => {
   const { id } = req.params;
   const { name, description, group, synonyms } = req.body;
 
@@ -401,23 +477,6 @@ app.put("/Group/change/:id", async (req, res) => {
   }
 });
 
-app.put("/Item/change/:id", async (req, res) => {
-  try {
-    const id=req.params.id;
-    const aktualiserteDaten = req.body;
-
-    const changeItemId = await itemModel.findByPk(id);
-    if (!changeItemId){
-      return res.status(404).send('Eintrag nicht gefunden')
-    }
-    await changeItemId.update(aktualiserteDaten)
-    res.send(changeItemId)
-  } catch (err) {
-    console.log(err);
-    res.status(500).send("Fehler beim Ändern des Items");
-  }
-});
-
 app.put("/Synonym/change/:id", async (req, res) => {
   try {
     const id=req.params.id;
@@ -482,14 +541,21 @@ app.put("/User/changeUser/:id", async (req, res) => {
 app.get("/Item/getById/:id", async (req, res) => {
   try {
     const id=req.params.id;
-
-    const idItem = await itemModel.findByPk(id);
-    if (!idItem){
-      return res.status(404).send('Eintrag nicht gefunden')
-    }
-    res.json(idItem); 
+    const item = await itemModel.findByPk(id);
+    
+    const combined= await item.map(async item => {
+      const synonyms = await synonymsModel.findAll({
+      where: {i_id: item.id}
+    });
+    return {
+      ...item.toJSON(),
+      item: synonyms
+    };
+    })
+    res.json(combined);
   } catch (err) {
     console.log(err);
+    res.status(500).send("Probleme bei dem Abrufen");
   }
 });
 
@@ -529,6 +595,9 @@ app.get("/User/getUser/:id", async (req, res) => {
     if (!user){
       return res.status(404).send('User not found')
     }
+
+    user.roles = user.roles.split(';');
+
     res.json(user); 
   } catch (err) {
     console.log(err);
@@ -690,7 +759,7 @@ app.delete("/User/deleteUser/:id", async (req, res) => {
 });
 
 // Methode funktioniert, wenn die Attribute als Teil der URL, also  http://localhost:5432/User/checkLogin?email=Luis@dhbw.com&password=Passwort€99, übergeben werden. Eventuell nochmal mit Frontend über Passwörter reden und gemeinsam testen
-app.get("/User/checkLogin", async (req, res) => {
+app.post("/User/checkLogin", async (req, res) => {
   const { email, password } = req.body;
   console.log(email, password);
 
@@ -707,6 +776,8 @@ app.get("/User/checkLogin", async (req, res) => {
 
     // Vergleiche das eingegebene Passwort mit dem in der Datenbank gespeicherten Passwort
     const isValidPassword = await bcrypt.compare(password, user.password);
+    user.roles = user.roles.split(';');
+
     if (isValidPassword) {
       return res.json({ user, success: true });
     } else {
